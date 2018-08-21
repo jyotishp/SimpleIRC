@@ -134,7 +134,7 @@ void startServerSession(
 				send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
 				close(client);
 			}
-			debugLog(search->second->username);
+			// debugLog(search->second->username);
 		}
 
 
@@ -143,7 +143,7 @@ void startServerSession(
 		{
 			memset(buffer, 0, sizeof buffer);
 			recv(client, buffer, buffer_size, 0);
-			std::cout << buffer;
+			// std::cout << buffer;
 
 			// If not in a chatroom
 			if (!current_chatroom)
