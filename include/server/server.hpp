@@ -127,8 +127,19 @@ public:
 			std::cout << "OPEN | " << inet_ntoa(client_addr.sin_addr) << " | "
 				<< ntohs(client_addr.sin_port) << std::endl;
 			
-			clients.insert(std::make_pair(client_fds.back(), new Client(client_fds.back(), client_addr)));
-			client_threads.emplace_back(new std::thread(startServerSession, client_fds.back(), &chatrooms, &clients));
+			// Accept only till max clients cap is reached
+			if (client_threads.size() < clients_capacity)
+			{
+				clients.insert(std::make_pair(client_fds.back(), new Client(client_fds.back(), client_addr)));
+				client_threads.emplace_back(new std::thread(startServerSession, client_fds.back(), &chatrooms, &clients));
+			}
+
+			// Reject if more than client max cap
+			else
+			{
+				printCurrentTime();
+				std::cout << "Maximum client connections reached!" << std::endl;
+			}
 		}
 
 		close(server_socket);
