@@ -10,6 +10,9 @@
 #include <sstream>
 #include <thread>
 #include <signal.h>
+#include <algorithm>
+
+#include "utils.hpp"
 
 int client;
 bool isExit = false, stop_receiver = false;
@@ -29,7 +32,65 @@ void receiver(bool *exit, int *sclient)
 	{
 		memset(buffer, 0, sizeof buffer);
 		recv(*sclient, buffer, buffer_size, 0);
-		std::cout << buffer;
+		// debugLog(buffer);
+
+		if ( strncmp(buffer, "FILE", 4) == 0 )
+		{
+			char *tmp = buffer + 5;
+			std::string filename(tmp);
+			// filename[filename.length() - 1] = '\0';
+			// debugLog(filename);
+
+			// memset(buffer, 0, sizeof buffer);
+			// recv(*sclient, buffer, buffer_size, 0);
+			// debugLog(buffer);
+
+			long file_size;
+			std::stringstream tmps;
+			do
+			{
+				memset(buffer, 0, sizeof buffer);
+				recv(client, buffer, 1, 0);
+				// debugLog(buffer);
+				if (*buffer == '!')
+					break;
+				tmps << buffer;
+			} while (true);
+
+			file_size = std::stoi(tmps.str().c_str());
+			// debugLog(file_size);
+
+			FILE *fd = fopen(filename.c_str(), "wb");
+
+			if (fd != NULL)
+			{
+
+				while (file_size > 0)
+				{
+					recv(*sclient, buffer, std::min(file_size, (long)buffer_size), 0);
+					// debugLog(std::min(file_size, (long)buffer_size));
+					// debugLog(buffer);
+					
+					int offset = 0;
+					
+					do
+					{
+						size_t written_size = fwrite(&buffer[offset], 1, std::min(file_size, (long)buffer_size)-offset, fd);
+						offset += written_size;
+					} while (offset < std::min(file_size, (long)buffer_size));
+
+					file_size -= std::min(file_size, (long)buffer_size);
+				}
+				
+			}
+
+			fclose(fd);
+			memset(buffer, 0, sizeof buffer);
+			std::cout << ">> ";
+
+		}
+		else
+			std::cout << buffer;
 	}
 }
 
@@ -86,7 +147,8 @@ int main(int argc, char const *argv[])
 
 	std::cout << "=> Awaiting confirmation from the server..." << std::endl;
 	recv(client, buffer, bufsize, 0);
-	std::cout << "=> Connection confirmed, you are good to go...";
+	std::cout << "=> Connection confirmed, you are good to go..." << std::endl;
+	std::cout << std::endl << ">> ";
 
 
 	std::stringstream userss;
@@ -98,13 +160,47 @@ int main(int argc, char const *argv[])
 		std::string msg;
 		getline(std::cin, msg);
 
-		std::stringstream ss;
-		ss << msg << std::endl;
+		std::stringstream s;
+		s << msg;
 		// std::cin >> std::ws;
 
 		// std::cout << msg << std::endl;
-		if (!msg.empty())
+		if (strncmp(msg.c_str(), "reply tcp", 9) == 0)
+		{
+
+			const char *tmp = msg.substr(10,msg.length()).c_str();
+			// std::string filename(tmp);
+
+			FILE *fd = fopen(tmp, "rb");
+
+			fseek(fd, 0, SEEK_END);
+			long file_size = ftell(fd);
+			rewind(fd);
+
+			std::stringstream ss;
+			ss << file_size << "!";
+			send(client, s.str().c_str(), strlen(s.str().c_str()), 0);
 			send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
+
+			char buffer[1024];
+	        
+			do
+			{
+				size_t curr = std::min(file_size, (long)1024);
+				curr = fread(buffer, 1, curr, fd);
+				send(client, buffer, curr, 0);
+				file_size -= curr;
+			}
+			while (file_size > 0);
+			fclose(fd);
+
+		}
+
+		else if (!msg.empty())
+		{
+			s << std::endl;
+			send(client, s.str().c_str(), strlen(s.str().c_str()), 0);
+		}	
 
 		if (strcmp(msg.c_str(), "exit") == 0)
 		{

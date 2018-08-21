@@ -44,3 +44,17 @@ void debugLog(auto msg)
 	std::cout << "\033[0;33m" << msg
 	<< "\033[0m" << std::endl;
 }
+
+// bool getFile(int client, FILE *fd)
+// {
+// 	// Get file size
+// 	long file_size;
+
+// 	// Receive file
+
+// }
+
+// void sendFile(int connection, std::string file_path)
+// {
+
+// }

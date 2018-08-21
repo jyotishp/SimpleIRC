@@ -7,6 +7,7 @@
 #include <map>
 #include <sstream>
 #include <iterator>
+#include <algorithm>
 
 #include "../../utils.hpp"
 
@@ -51,6 +52,69 @@ public:
 	void removeClient(std::string user)
 	{
 		this->clients.erase(user);
+	}
+
+	void sendData(int client, const char *data, int buffsize)
+	{
+		std::map<std::string, Client*>::iterator itr;
+		for (itr = this->clients.begin(); itr != this->clients.end(); ++itr)
+		{
+			if (itr->second->fd != client)
+			{
+				send(itr->second->fd, data, buffsize, 0);
+			}
+		}
+	}
+
+	void sendFile(int client, std::string filename, std::string username)
+	{
+		debugLog("Started");
+		// Get file size
+		long file_size;
+		std::stringstream fstmp;
+		char tbuffer[1];
+		do
+		{
+			recv(client, tbuffer, 1, 0);
+			debugLog(tbuffer);
+			if (*tbuffer == '!')
+				break;
+			fstmp << tbuffer;
+		} while (true);
+		debugLog("Loop e");
+		debugLog(fstmp.str());
+		file_size = std::stoi(fstmp.str().c_str());
+
+		// Loop for buffer size till file size is reached
+		int buffer_size = 1024;
+		char buffer[buffer_size];
+		std::map<std::string, Client*>::iterator itr;
+
+		// Notify clients about file reception
+		std::stringstream msg;
+		msg << "FILE " << filename;
+		sendData(client, msg.str().c_str(), strlen(msg.str().c_str()));
+		msg.str(std::string());
+		msg << file_size << "!";
+		sendData(client, msg.str().c_str(), strlen(msg.str().c_str()));
+
+		while (file_size > 0)
+		{
+			// Receive a chunk, send it to all
+			recv(client, buffer, std::min((long)buffer_size, file_size), 0);
+			sendData(client, buffer, std::min((long)buffer_size, file_size));
+
+			file_size -= std::min((long)buffer_size, file_size);	
+		}
+
+		msg.str(std::string());
+		msg << getCurrentTime() << " Server: ";
+		msg << this->name << std::endl;
+		msg << "Received file: " << filename << std::endl;
+		msg << "From: " << username << std::endl;
+		msg << ">> ";
+		sendData(client, msg.str().c_str(), strlen(msg.str().c_str()));
+
 	}
 
 	// bool operator<(const ChatRoom& t) const
@@ -267,6 +331,16 @@ void startServerSession(
 
 				// Add someone to the chatroom
 
+				// Send file to all users in chatroom over TCP
+				else if ( strncmp(buffer, "reply tcp", 9) == 0 )
+				{
+					char *tmp = buffer + 10;
+					std::string filename(tmp);
+					debugLog(filename);
+					std::cout << "lalalalalal" << std::endl;
+					current_chatroom->sendFile(client, filename, username);
+				}
+				
 				// Send message to all users in chatroom
 				else if ( strncmp(buffer, "reply", 5) == 0 )
 				{
@@ -279,8 +353,6 @@ void startServerSession(
 					// debugLog(ss.str());
 					current_chatroom->sendMessage(ss.str());
 				}
-
-				// Send file to all users in chatroom
 
 				// Unkown command
 				else
