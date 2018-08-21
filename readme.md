@@ -53,6 +53,7 @@ On clients,
 ### Inside chatroom
 - `list users` -- List of users in the existing chatroom.
 - `reply <msg>` -- Broadcast `msg` to everyone in the chatroom.
+- `reply tcp <file_path>` -- Send file to everyone in the chatroom (Doesn't work on telnet).
 - `exit chatroom` -- Exits the chatroom.
 
 ## Features
