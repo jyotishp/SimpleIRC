@@ -1,5 +1,5 @@
-#include<iostream>
-#include<ctime>
+#include <iostream>
+#include <ctime>
 #include <cstring>
 
 void printCurrentTime()
@@ -18,6 +18,24 @@ void printCurrentTime()
 	char *str_time = asctime(ti);
 	str_time[strlen(str_time) - 1] = 0;
 	std::cout << str_time << " | ";
+}
+
+char *getCurrentTime()
+{
+	// Declaring argument for time()
+	time_t tt;
+
+	// Declaring variable to store return value of
+	// localtime()
+	struct tm * ti;
+	// Applying time()
+	time (&tt);
+
+	// Using localtime()
+	ti = localtime(&tt);
+	char *str_time = asctime(ti);
+	str_time[strlen(str_time) - 1] = 0;
+	return str_time;
 }
 
 void debugLog(auto msg)

@@ -1,9 +1,14 @@
 #include <string>
 #include <signal.h>
 
-#include "server.hpp"
+#include "include/server/server.hpp"
 
-using namespace Server;
+Server *server_ptr;
+
+void closeServer(int s)
+{
+	server_ptr->closeServer();
+}
 
 int printUsage()
 {
@@ -13,6 +18,13 @@ int printUsage()
 
 int main(int argc, char const *argv[])
 {
+	// signal(SIGINT, closeServer);
+	// // struct sigaction sigIntHandler;
+	// // sigIntHandler.sa_handler = closeServer;
+	// // sigemptyset(&sigIntHandler.sa_mask);
+	// // sigIntHandler.sa_flags = 0;
+	// // sigaction(SIGINT, &sigIntHandler, NULL);
+
 	int port, clients;
 
 	// Input parsing
@@ -28,13 +40,7 @@ int main(int argc, char const *argv[])
 	try
 	{
 		Server server(clients, port);
-		struct sigaction sigIntHandler;
-
-		sigIntHandler.sa_handler = server.closeServer;
-		sigemptyset(&sigIntHandler.sa_mask);
-		sigIntHandler.sa_flags = 0;
-
-		sigaction(SIGINT, &sigIntHandler, NULL);
+		server_ptr = &server;
 	}
 	catch (const char* msg)
 	{

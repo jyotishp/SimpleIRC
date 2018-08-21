@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <thread>
 #include <signal.h>
+#include <vector>
 
 #include "utils.hpp"
 
@@ -18,17 +19,47 @@ public:
 	socklen_t server_addr_size;
 	bool exitServer = false;
 	// std::thread master_thread;
+	std::vector<std::unique_ptr <std::thread> > client_threads;
+	std::map<int, Client*> clients;
+	std::vector<int> client_fds;
+	std::map<std::string, ChatRoom*> chatrooms;
+	// std::vector<ChatRoom> chatrooms;
+
+	int acceptClient()
+	{
+		int client_conn;
+		struct sockaddr_in client_addr;
+		socklen_t client_addr_size;
+
+		client_conn = accept(
+			server_socket,
+			(struct sockaddr*) &client_addr,
+			&server_addr_size
+		);
+
+		if (client_conn < 0)
+		{
+			printCurrentTime();
+			std::cout << "Couldn't accept connection" << std::endl;
+		}
+
+		printCurrentTime();
+		std::cout << "OPEN | " << inet_ntoa(client_addr.sin_addr) << " | "
+			<< ntohs(client_addr.sin_port) << std::endl;
+
+		return client_conn;
+	}
 
 	Server()
 	{
 
 	}
 
-	Server(int clients, int server_port = 8000)
+	Server(int clients_cap, int server_port = 8000)
 	{
 
 		// Exit if wrong number of clients are specified
-		if (clients < 1)
+		if (clients_cap < 1)
 		{
 			throw "Number of clients should be greater than 0.";
 		}
@@ -40,7 +71,7 @@ public:
 		}
 
 		// Save clients capacity and server port to the server object
-		clients_capacity = clients;
+		clients_capacity = clients_cap;
 		port = server_port;
 
 		// Get a TCP socket for server
@@ -80,13 +111,13 @@ public:
 
 		while (!exitServer)
 		{
-			client_conn = accept(
+			client_fds.push_back(accept(
 				server_socket,
 				(struct sockaddr*) &client_addr,
 				&server_addr_size
-			);
+			));
 
-			if (client_conn < 0)
+			if (client_fds.back() < 0)
 			{
 				printCurrentTime();
 				std::cout << "Couldn't accept connection" << std::endl;
@@ -95,21 +126,21 @@ public:
 			printCurrentTime();
 			std::cout << "OPEN | " << inet_ntoa(client_addr.sin_addr) << " | "
 				<< ntohs(client_addr.sin_port) << std::endl;
-
-			std::string buffer = "=>Connected to server.\n";
-			send(client_conn, buffer.c_str(), strlen(buffer.c_str()), 0);
-			close(client_conn);
+			
+			clients.insert(std::make_pair(client_fds.back(), new Client(client_fds.back(), client_addr)));
+			client_threads.emplace_back(new std::thread(startServerSession, client_fds.back(), &chatrooms, &clients));
 		}
+
+		close(server_socket);
 
 	}
 
 	~Server()
 	{
-		close(server_socket);
 		std::cout << "Server on 0.0.0.0:" << port << " stopped" << std::endl;
 	}
 
-	void closeServer(int s)
+	void closeServer()
 	{
 		std::cout << "Received shutdown. Shutting down server..." << std::endl;
 		exitServer = true;
