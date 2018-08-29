@@ -18,12 +18,10 @@ public:
 	struct sockaddr_in server_addr;
 	socklen_t server_addr_size;
 	bool exitServer = false;
-	// std::thread master_thread;
 	std::vector<std::unique_ptr <std::thread> > client_threads;
 	std::map<int, Client*> clients;
 	std::vector<int> client_fds;
 	std::map<std::string, ChatRoom*> chatrooms;
-	// std::vector<ChatRoom> chatrooms;
 
 	int acceptClient()
 	{

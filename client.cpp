@@ -17,12 +17,15 @@
 int client;
 bool isExit = false, stop_receiver = false;
 
+// Print usage info and exit
 void printUsage()
 {
 	std::cout << "Usage: ./client <server_ip> <port> <username>" << std::endl;
 	exit(1);
 }
 
+// This runs in a seperate thread
+// Keeps receiving information and prints data to stdout unless it's a file
 void receiver(bool *exit, int *sclient)
 {
 	int buffer_size = 1024;
@@ -30,46 +33,43 @@ void receiver(bool *exit, int *sclient)
 
 	while (!isExit)
 	{
+		// Clear buffer so that previous received chunk is not displayed
 		memset(buffer, 0, sizeof buffer);
 		recv(*sclient, buffer, buffer_size, 0);
-		// debugLog(buffer);
 
+		// Logic for file transfers
 		if ( strncmp(buffer, "FILE", 4) == 0 )
 		{
 			char *tmp = buffer + 5;
 			std::string filename(tmp);
-			// filename[filename.length() - 1] = '\0';
-			// debugLog(filename);
 
-			// memset(buffer, 0, sizeof buffer);
-			// recv(*sclient, buffer, buffer_size, 0);
-			// debugLog(buffer);
 
 			long file_size;
 			std::stringstream tmps;
+
+			// Need to do it in a better way
+			// Receive file size from server
 			do
 			{
 				memset(buffer, 0, sizeof buffer);
 				recv(client, buffer, 1, 0);
-				// debugLog(buffer);
 				if (*buffer == '!')
 					break;
 				tmps << buffer;
 			} while (true);
 
 			file_size = std::stoi(tmps.str().c_str());
-			// debugLog(file_size);
 
 			FILE *fd = fopen(filename.c_str(), "wb");
 
+			// Write to file
 			if (fd != NULL)
 			{
 
 				while (file_size > 0)
 				{
 					recv(*sclient, buffer, std::min(file_size, (long)buffer_size), 0);
-					// debugLog(std::min(file_size, (long)buffer_size));
-					// debugLog(buffer);
+
 					
 					int offset = 0;
 					
@@ -94,13 +94,14 @@ void receiver(bool *exit, int *sclient)
 	}
 }
 
+// Handle SIGINT
 void closeClient(int s)
 {
 	std::cout << "Exiting client..." << std::endl;
 	isExit = true;
 	std::string msg = "exit";
 	send(client, msg.c_str(), strlen(msg.c_str()), 0);
-	// close(client);
+	// Don't close the socket from client. Let the server kill the connection.
 }
 
 int main(int argc, char const *argv[])
@@ -118,9 +119,7 @@ int main(int argc, char const *argv[])
 		printUsage();
 	}
 
-	// int client;
 	int server_port = std::stoi(argv[2]);; 
-	// bool isExit = false, stop_receiver = false;
 	int bufsize = 1024;
 	char buffer[bufsize];
 	std::string server_ip(argv[1]);
@@ -157,19 +156,18 @@ int main(int argc, char const *argv[])
 	std::thread receiver_thread(receiver, &stop_receiver, &client);
 
 	do {
+		// Read input
 		std::string msg;
 		getline(std::cin, msg);
 
 		std::stringstream s;
 		s << msg;
-		// std::cin >> std::ws;
 
-		// std::cout << msg << std::endl;
+		// Logic to send files
 		if (strncmp(msg.c_str(), "reply tcp", 9) == 0)
 		{
 
 			const char *tmp = msg.substr(10,msg.length()).c_str();
-			// std::string filename(tmp);
 
 			FILE *fd = fopen(tmp, "rb");
 
@@ -193,14 +191,16 @@ int main(int argc, char const *argv[])
 			}
 			while (file_size > 0);
 			fclose(fd);
+			std::cout >> std::endl >> ">> ";
 
 		}
 
+		// If input is not empty send command
 		else if (!msg.empty())
 		{
 			s << std::endl;
 			send(client, s.str().c_str(), strlen(s.str().c_str()), 0);
-		}	
+		}
 
 		if (strcmp(msg.c_str(), "exit") == 0)
 		{

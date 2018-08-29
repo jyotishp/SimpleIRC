@@ -1,8 +1,4 @@
 #include <iostream>
-// #include <sys/types.h>
-// #include <sys/socket.h>
-// #include <netinet/in.h>
-// #include <arpa/inet.h>
 #include <cstring>
 #include <map>
 #include <sstream>
@@ -28,7 +24,6 @@ public:
 class ChatRoom
 {
 public:
-	// std::vector<int*> clients;
 	std::map<std::string, Client*> clients;
 	std::string name;
 	std::vector<std::string> history;
@@ -68,21 +63,19 @@ public:
 
 	void sendFile(int client, std::string filename, std::string username)
 	{
-		debugLog("Started");
 		// Get file size
 		long file_size;
 		std::stringstream fstmp;
 		char tbuffer[1];
 		do
 		{
+			// Need to do it in a better way
 			recv(client, tbuffer, 1, 0);
-			debugLog(tbuffer);
 			if (*tbuffer == '!')
 				break;
 			fstmp << tbuffer;
 		} while (true);
-		debugLog("Loop e");
-		debugLog(fstmp.str());
+
 		file_size = std::stoi(fstmp.str().c_str());
 
 		// Loop for buffer size till file size is reached
@@ -116,13 +109,6 @@ public:
 		sendData(client, msg.str().c_str(), strlen(msg.str().c_str()));
 
 	}
-
-	// bool operator<(const ChatRoom& t) const
- //    {
- //        return strcmp(this->name, t.name);
- //    }
-
-	// ~ChatRoom();
 	
 };
 
@@ -171,7 +157,6 @@ void startServerSession(
 	std::string username;
 	std::map <std::string, ChatRoom*> :: iterator cr;
 	ChatRoom *current_chatroom;
-	// const std::map <std::string, ChatRoom*> :: const_iterator NullIterator(NULL);
 
 	while (client > 0 && !kill_client)
 	{
@@ -185,7 +170,6 @@ void startServerSession(
 			auto search = clients->find(client);
 			if (search != clients->end())
 			{
-				// username[strlen(username.c_str()) - 1] = '\0';
 				search->second->username = username;
 				initialized = true;
 			}
@@ -198,7 +182,6 @@ void startServerSession(
 				send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
 				close(client);
 			}
-			// debugLog(search->second->username);
 		}
 
 
@@ -207,7 +190,6 @@ void startServerSession(
 		{
 			memset(buffer, 0, sizeof buffer);
 			recv(client, buffer, buffer_size, 0);
-			// std::cout << buffer;
 
 			// If not in a chatroom
 			if (!current_chatroom)
@@ -228,7 +210,6 @@ void startServerSession(
 				// Get list of chatrooms
 				else if ( strncmp(buffer, "list chatrooms", 14) == 0 )
 				{
-					// Send list of active chat rooms
 
 					// No Chatrooms
 					if (chatrooms->empty())
@@ -246,8 +227,7 @@ void startServerSession(
 						ss << std::endl << getCurrentTime() << " Server:" << std::endl;
 						for (cr = chatrooms->begin(); cr != chatrooms->end(); ++cr)
 						{
-							ss << "  - " << cr->first.c_str();// << std::endl;
-							// std::cout << cr->first.c_str() << std::endl;
+							ss << "  - " << cr->first.c_str();
 						}
 						ss << std::endl << ">> ";
 						send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
@@ -258,10 +238,8 @@ void startServerSession(
 				// Join chatroom
 				else if ( strncmp(buffer, "join chatroom", 13) == 0 )
 				{
-					// String of the "create" word and tailing "\n"
 					char *tmp = buffer + 14;
 					std::string cr_name(tmp);
-					// cr_name[cr_name.length() - 1] = '\0';
 
 					current_chatroom = joinChatRoom(cr_name, chatrooms, clients->find(client)->second);
 				}
@@ -269,10 +247,8 @@ void startServerSession(
 				// Create chatroom
 				else if ( strncmp(buffer, "create chatroom", 15) == 0 )
 				{
-					// String of the "create" word and tailing "\n"
 					char *tmp = buffer + 16;
 					std::string cr_name(tmp);
-					// cr_name[cr_name.length() - 1] = '\0';
 
 					// Push it into available chatrooms
 					chatrooms->insert(std::make_pair(cr_name, new ChatRoom(cr_name)));
@@ -302,7 +278,6 @@ void startServerSession(
 					// Send Good bye message
 					std::stringstream ss;
 					ss << std::endl << getCurrentTime() << " Server: ";
-					// std::cout << current_chatroom->name.c_str() << std::endl;
 					ss << "Exiting chatroom!" << std::endl << ">> ";
 					send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
 
@@ -324,7 +299,6 @@ void startServerSession(
 						ss << "  - " << i->second->username;
 					}
 					ss << std::endl << ">> ";
-					// debugLog(ss.str());
 
 					send(client, ss.str().c_str(), strlen(ss.str().c_str()), 0);
 				}
@@ -336,8 +310,6 @@ void startServerSession(
 				{
 					char *tmp = buffer + 10;
 					std::string filename(tmp);
-					debugLog(filename);
-					std::cout << "lalalalalal" << std::endl;
 					current_chatroom->sendFile(client, filename, username);
 				}
 				
@@ -350,7 +322,6 @@ void startServerSession(
 					std::stringstream ss;
 					ss << "At " << getCurrentTime() << ", " << username;
 					ss << "   " << msg << std::endl << ">> ";
-					// debugLog(ss.str());
 					current_chatroom->sendMessage(ss.str());
 				}
 
@@ -370,10 +341,6 @@ void startServerSession(
 
 		} while (*buffer != '*');
 
-		// Send status and data from server
-
-		// Get clients response
-		// This can be data or ackno
 	}
 
 	close(client);
