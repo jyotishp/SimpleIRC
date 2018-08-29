@@ -1,4 +1,5 @@
 # Simple IRC Client-Server
+A simple IRC implementation in C++.
 
 ## Compiling and running on single node
 The `server.sh` file has the commands to compile both server and client. To start the server,
@@ -61,7 +62,7 @@ On clients,
 - Broadcasts messages to all the clients in the chatroom.
 
 ## To-do
-- When client exits, the pointer still remains in the clients variable. Need to remove the exxted client.
+- When client exits, the pointer still remains in the clients variable. Need to remove the exited client.
 - In `client.cpp`, the output needs to be printed at once (it stops after a linebreak).
 - In `client.cpp`, handle triggering `exit` command when inside a chatroom.
 - Implement unique usernames.
